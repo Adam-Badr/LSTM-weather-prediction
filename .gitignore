@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment & versioning
+.venv/
+.env/
+.python-version
+
+# Jupyter Notebook checkpoints (if any)
+.ipynb_checkpoints/
+
+# macOS system files
+.DS_Store
+
+# VSCode project settings
+.vscode/
+
+# Local SQLite cache (from requests_cache or similar)
+.cache/
+.cache.sqlite
+
+# Model files
+*.h5
+*.keras
+*.pt
+*.pth
+
+# Log files / test outputs
+*.log
+*.out
