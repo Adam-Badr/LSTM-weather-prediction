@@ -157,3 +157,77 @@ for bar in bars:
     plt.text(bar.get_x() + bar.get_width() / 2.0, height, f'{height:.1f}', ha='center', va='bottom')
 
 plt.show()
+
+
+
+
+
+
+
+
+
+def run_pytorch_model():
+    df = get_weather_data()
+    df_features = df.drop(columns=["date"])
+    scalar = MinMaxScaler()
+    scaledArray = scalar.fit_transform(df_features)
+
+    timesteps = 48
+    X, Y = [], []
+
+    for i in range(0, len(scaledArray) - timesteps):
+        X.append(scaledArray[i:i + timesteps])
+        Y.append(scaledArray[i + timesteps])
+
+    X = np.array(X)
+    Y = np.array(Y)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, shuffle=False)
+
+    X_Train_Tensor = torch.tensor(X_train, dtype=torch.float32)
+    X_Test_Tensor = torch.tensor(X_test, dtype=torch.float32)
+    y_Train_Tensor = torch.tensor(y_train, dtype=torch.float32)
+    y_Test_Tensor = torch.tensor(y_test, dtype=torch.float32)
+
+    train_Dataset = TensorDataset(X_Train_Tensor, y_Train_Tensor)
+    train_Loader = DataLoader(train_Dataset, batch_size=20, shuffle=True)
+
+    class LSTM(nn.Module):
+        def __init__(self, input_size, hidden_size, num_layers):
+            super(LSTM, self).__init__()
+            self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+            self.fc = nn.Linear(hidden_size, input_size)
+
+        def forward(self, x):
+            out, _ = self.lstm(x)
+            out = self.fc(out[:, -1, :])
+            return out
+
+    input_size = 6
+    hidden_size = 64
+    num_layers = 2
+
+    network = LSTM(input_size, hidden_size, num_layers)
+    loss_fn = nn.MSELoss()
+    optimizer = torch.optim.Adam(network.parameters(), lr=0.01)
+
+    for epoch in range(40):
+        network.train()
+        for X_batch, y_batch in train_Loader:
+            output = network(X_batch)
+            loss = loss_fn(output, y_batch)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+    network.eval()
+    with torch.no_grad():
+        predictions = network(X_Test_Tensor)
+
+    return predictions, y_Test_Tensor.numpy(), scalar
+
+
+
+if __name__ == "__main__":
+    run_pytorch_model()

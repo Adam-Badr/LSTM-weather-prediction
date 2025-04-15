@@ -8,6 +8,8 @@ import numpy as np
 from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
 
+
+
 df = get_weather_data()
 print(df.head())
 
@@ -104,3 +106,42 @@ actual_current = df_features.iloc[-1].values
 print("\n Actual Current Weather (from API):")
 for name, value in zip(feature_names, actual_current):
     print(f"{name}: {value:.2f}")
+
+
+
+
+
+
+def run_tensorflow_model():
+    # Re-run the same logic with silent training
+    df = get_weather_data()
+    df_features = df.drop(columns=["date"])
+    scalar = MinMaxScaler()
+    scaledArray = scalar.fit_transform(df_features)
+
+    timesteps = 48
+    X, Y = [], []
+
+    for i in range(0, len(scaledArray) - timesteps):
+        X.append(scaledArray[i:i + timesteps])
+        Y.append(scaledArray[i + timesteps])  
+
+    X = np.array(X)
+    Y = np.array(Y)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, shuffle=False)
+
+    model = Sequential([
+        LSTM(64, activation='tanh', recurrent_activation='sigmoid', return_sequences=True, input_shape=(timesteps, 6)),
+        LSTM(64, activation='tanh', recurrent_activation='sigmoid'),
+        Dense(6)
+    ])
+
+    model.compile(optimizer=Adam(learning_rate=0.01), loss='mean_squared_error')
+    model.fit(X_train, y_train, epochs=40, batch_size=20, validation_split=0.2, verbose=0)
+
+    predictions = model.predict(X_test, verbose=0)
+    return predictions, y_test, scalar
+
+if __name__ == "__main__":
+    run_tensorflow_model()
